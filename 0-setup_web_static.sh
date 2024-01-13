@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 # Sets up a web server for deployment of web_static.
 
+# Update package list and install Nginx
 apt-get update
 apt-get install -y nginx
 
-mkdir -p /data/web_static/releases/test/
-mkdir -p /data/web_static/shared/
+# Create necessary directories and files
+mkdir -p /data/web_static/{releases/test,shared}
 echo "Holberton School" > /data/web_static/releases/test/index.html
 ln -sf /data/web_static/releases/test/ /data/web_static/current
 
-chown -R ubuntu /data/
-chgrp -R ubuntu /data/
+# Set ownership and group recursively
+chown -R ubuntu:ubuntu /data/
 
-printf %s "server {
+# Configure Nginx
+nginx_config="/etc/nginx/sites-available/default"
+nginx_content=$(cat <<EOF
+server {
     listen 80 default_server;
     listen [::]:80 default_server;
     add_header X-Served-By $HOSTNAME;
@@ -20,19 +24,24 @@ printf %s "server {
     index  index.html index.htm;
 
     location /hbnb_static {
-	alias /data/web_static/current;
-	index index.html index.htm;
+        alias /data/web_static/current;
+        index index.html index.htm;
     }
 
     location /redirect_me {
-	return 301 http://cuberule.com/;
+        return 301 http://cuberule.com/;
     }
 
     error_page 404 /404.html;
     location /404 {
-      root /var/www/html;
-      internal;
+        root /var/www/html;
+        internal;
     }
-}" > /etc/nginx/sites-available/default
+}
+EOF
+)
 
+echo "$nginx_content" > "$nginx_config"
+
+# Restart Nginx
 service nginx restart
